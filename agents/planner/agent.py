@@ -20,8 +20,18 @@ Respond with the suggested investments in the following schema (JSON Object):
         "amount": 34000,
         "percentage": 35,
         "reason": "Exaplain the reason to choose this investment"
+        "risk": 1,
+        "ease_of_use": 3
     }]
 }
+
+The meaning of the fields are:
+- Name: the name of the asset
+- Amount: The amount to invest in the asset
+- Percentage: What percentage of the total amount we're investing here
+- Reason: The reason to invest in this asset
+- Risk: A val between 1 and 10 to identify the risk
+- Ease of use: How easy is it for the user to invest in the asset  Value between 1 and 10  This in important, since we'll be advicing the user to start by investing a little bit of its money on the one with the lowest value
 """
 
 class InvestmentAmount(BaseModel):
@@ -30,22 +40,23 @@ class InvestmentAmount(BaseModel):
     name: str = Field(description='The name of this investment')
     reason: str = Field(description='The reason to include this investment')
     explanation: str | None = Field(default=None)
+    risk: int = Field(description='A val between 1 and 10 describing the risk')
+    ease_of_use: int = Field('A val between 1 and 10 that describes the ease of use')
 
 class AgentResponse(BaseModel):
     investments: list[InvestmentAmount] = Field(description='List of the investments')
 
 class InvestmentPlannerAgent(AgentBuilder):
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, model) -> None:
+        super().__init__(model)
 
     def build(self, **kwargs) -> CompiledStateGraph:
         # Create the agent
         memory = MemorySaver()
-        model = init_chat_model("gpt-5-mini", model_provider="openai")        
         tools = []
         return create_react_agent(
-            model, 
+            self.model, 
             tools, 
             checkpointer=memory, 
             prompt=system_prompt,

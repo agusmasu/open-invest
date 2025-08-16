@@ -1,6 +1,7 @@
 import json
 import operator
 from typing import Annotated, TypedDict
+from langchain.chat_models import init_chat_model
 from langgraph.graph import StateGraph
 from langgraph.types import Send
 from pydantic import BaseModel
@@ -8,7 +9,12 @@ from agents.explainer.agent import ExplainingAgent
 from agents.planner.agent import AgentResponse, InvestmentAmount, InvestmentPlannerAgent
 from IPython.display import Image, display
 
-user_context = {
+model = init_chat_model("gpt-5-mini", model_provider="openai")        
+
+planning_agent = InvestmentPlannerAgent(model).build()
+explanation_agent = ExplainingAgent(model).build()
+
+mocked_context = {
     "country": "Argentina",
     "investmentProfile": "moderate",
     "user_idea": "Quiero invertir para tener un fondo para retirarme",
@@ -22,7 +28,7 @@ class InvestmentGraphState(TypedDict):
     user_context: any
 
 def get_investment_ideas(state: InvestmentGraphState) -> InvestmentGraphState:
-    agent = InvestmentPlannerAgent().build()
+    agent = planning_agent
     
     prompt = f"Message: {state['user_message']}. User Context: {state['user_context']}"
 
@@ -35,21 +41,22 @@ def get_investment_ideas(state: InvestmentGraphState) -> InvestmentGraphState:
     return state
 
 def continue_to_explanation(state: InvestmentGraphState):
-    print('Sending investments!')
+    print('Sending investments to branches!')
     return [Send("explain_investment", {"investment": i}) for i in state["investments"]]
 
 # Create a new Graph
 workflow = StateGraph(state_schema=InvestmentGraphState)
 
 def explain_investment(investment: InvestmentAmount):
-    print('Received investment', investment)
-    message = f"Investment: {investment}"
-    agent = ExplainingAgent().build()
+    user_likes = 'futbol'
+    print('Starting to explain')
+    message = f"Investment: {investment}. User Fav: {user_likes}"
+    agent = explanation_agent
     agent_response = agent.invoke({"messages": [message]})
 
     explanation = agent_response["messages"][-1].content
-    print('explanation', explanation)
 
+    print('Explained!')
     investment['investment'].explanation = explanation
     return {"explained_investments": [investment]}
 
@@ -82,5 +89,3 @@ with open("investment_workflow.png", "wb") as f:
 print("Graph saved as 'investment_workflow.png'")
 
 graph = app
-
-# print(result)

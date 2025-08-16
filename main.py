@@ -1,8 +1,8 @@
-from typing import Dict
+from typing import Dict, List
 from email import message
 from typing import Any
 from fastapi import FastAPI
-from graph import InvestmentGraphState, graph, user_context
+from graph import InvestmentGraphState, graph
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -10,6 +10,7 @@ app = FastAPI()
 class PlanInput(BaseModel):
     user_context: Dict[str, Any]  # Fixed: proper type annotation
     message: str
+    likes: List[str]
 
 @app.post('/plan')
 async def create_plan(body: PlanInput):
